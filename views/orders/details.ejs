@@ -1,0 +1,266 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<style>
+  .details-card {
+    background: var(--surface-light);
+    border: 1px solid var(--surface-glass-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .details-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .details-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .details-label {
+    color: var(--gray-400);
+    font-size: 0.9rem;
+    min-width: 150px;
+  }
+  .details-value {
+    color: var(--gray-50);
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  .items-table th {
+    text-align: right;
+    color: var(--gray-400);
+    padding: 10px;
+    border-bottom: 1px solid var(--surface-glass-border);
+  }
+  .items-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: var(--gray-200);
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .status-badge.pending_review      { background: rgba(250,200,50,0.15); color: #facc32; }
+  .status-badge.pending_preparation { background: rgba(100,150,255,0.15); color: #6496ff; }
+  .status-badge.pending_delivery    { background: rgba(100,200,255,0.15); color: #64c8ff; }
+  .status-badge.completed           { background: rgba(50,200,120,0.15); color: #32c878; }
+
+  .action-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-weight: bold;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .action-btn:hover { opacity: 0.9; }
+  .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width:100%;max-width:800px;margin:0 auto;position:relative;z-index:1;">
+
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <a href="/orders">الطلبات</a>
+        <span>/</span>
+        <span>تفاصيل الطلب</span>
+      </nav>
+      <h1>طلب رقم: <%= order.orderCode %></h1>
+    </div>
+
+    <!-- Status Actions -->
+    <% 
+      const allowedTransitions = STATUS_TRANSITIONS[order.status] || [];
+      const nextStatus = allowedTransitions.length > 0 ? allowedTransitions[0] : null;
+    %>
+    
+    <% if (nextStatus) { %>
+      <div style="margin-bottom: 24px;">
+        <button 
+          id="changeStatusBtn" 
+          class="action-btn"
+          data-id="<%= order._id %>"
+          data-status="<%= nextStatus %>"
+        >
+          تحديث الحالة إلى: <%= STATUS_LABELS[nextStatus] || nextStatus %>
+        </button>
+      </div>
+    <% } %>
+
+    <!-- Quick Info -->
+    <div class="details-card">
+      <h2 style="margin:0 0 16px 0; font-size:1.1rem; color:var(--gray-300);">معلومات أساسية</h2>
+      <div class="details-row">
+        <span class="details-label">الحالة</span>
+        <span class="details-value"><span class="status-badge <%= order.status %>"><%= STATUS_LABELS[order.status] || order.status %></span></span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">تاريخ الطلب</span>
+        <span class="details-value"><%= new Date(order.createdAt).toLocaleString('ar-EG') %></span>
+      </div>
+    </div>
+
+    <!-- Customer & Address -->
+    <div class="details-card">
+      <h2 style="margin:0 0 16px 0; font-size:1.1rem; color:var(--gray-300);">بيانات العميل</h2>
+      <div class="details-row">
+        <span class="details-label">الاسم</span>
+        <span class="details-value"><%= order.customer ? order.customer.fullName : '—' %></span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">رقم الهاتف</span>
+        <span class="details-value" dir="ltr" style="text-align:right;"><%= order.customer ? order.customer.primaryPhone : '—' %></span>
+      </div>
+      <% if (order.customer && order.customer.secondaryPhone) { %>
+      <div class="details-row">
+        <span class="details-label">رقم إضافي</span>
+        <span class="details-value" dir="ltr" style="text-align:right;"><%= order.customer.secondaryPhone %></span>
+      </div>
+      <% } %>
+      
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);"></div>
+      
+      <div class="details-row">
+        <span class="details-label">المحافظة / المنطقة</span>
+        <span class="details-value">
+          <%= order.address ? (order.address.governorate + ' - ' + order.address.area) : '—' %>
+        </span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">العنوان بالتفصيل</span>
+        <span class="details-value"><%= order.address ? order.address.detailedAddress : '—' %></span>
+      </div>
+      <div class="details-row">
+        <span class="details-label">المنزل</span>
+        <span class="details-value">
+          <%= order.address ? ('مبنى ' + order.address.buildingName + '، دور ' + order.address.floorNumber + '، شقة ' + order.address.apartmentNumber) : '—' %>
+        </span>
+      </div>
+      <% if (order.address && order.address.landmark) { %>
+      <div class="details-row">
+        <span class="details-label">علامة مميزة</span>
+        <span class="details-value"><%= order.address.landmark %></span>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Items -->
+    <div class="details-card">
+      <h2 style="margin:0 0 16px 0; font-size:1.1rem; color:var(--gray-300);">المنتجات</h2>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>المقاس</th>
+            <th style="text-align:center;">الكمية</th>
+            <th>السعر (بعد الخصم)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (order.items && order.items.length > 0) { %>
+            <% order.items.forEach(item => { %>
+              <tr>
+                <td><%= item.productName %></td>
+                <td><%= item.selectedSize %></td>
+                <td style="text-align:center;"><%= item.quantity %></td>
+                <td><%= item.priceAfterDiscount %> ج.م</td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr><td colspan="4" style="text-align:center;">لا توجد منتجات</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pricing & Payment -->
+    <div class="details-card">
+      <h2 style="margin:0 0 16px 0; font-size:1.1rem; color:var(--gray-300);">الدفع والحساب</h2>
+      <div class="details-row">
+        <span class="details-label">طريقة الدفع</span>
+        <span class="details-value">
+          <% 
+            let pmLabel = order.payment ? order.payment.method : '—';
+            if (pmLabel === 'cash_on_delivery') pmLabel = 'الدفع عند الاستلام (عربون)';
+            if (pmLabel === 'instapay') pmLabel = 'انستا باي';
+            if (pmLabel === 'mobile_wallet') pmLabel = 'محفظة إلكترونية';
+          %>
+          <%= pmLabel %>
+        </span>
+      </div>
+      
+      <% if (order.pricing && order.pricing.promoCode) { %>
+      <div class="details-row">
+        <span class="details-label">كود خصم</span>
+        <span class="details-value" style="color:var(--success);"><%= order.pricing.promoCode %> (-<%= order.pricing.promoDiscount %> ج.م)</span>
+      </div>
+      <% } %>
+      
+      <div class="details-row">
+        <span class="details-label">الإجمالي النهائي</span>
+        <span class="details-value" style="font-weight:bold; font-size:1.1rem; color:var(--primary-light);">
+          <%= order.pricing ? order.pricing.finalTotal.toLocaleString() : '0' %> ج.م
+        </span>
+      </div>
+
+      <% if (order.payment && order.payment.depositRequired > 0) { %>
+      <div class="details-row">
+        <span class="details-label">العربون المحسوب</span>
+        <span class="details-value"><%= order.payment.depositRequired %> ج.م</span>
+      </div>
+      <% } %>
+
+      <% if (order.payment && order.payment.paymentProofPath) { %>
+      <div style="margin-top:20px;">
+        <span class="details-label" style="display:block;margin-bottom:8px;">إيصال التحويل المرفق:</span>
+        <img src="<%= order.payment.paymentProofPath %>" alt="إيصال الدفع" style="max-width:100%; border-radius:8px; border:1px solid var(--surface-glass-border);">
+      </div>
+      <% } %>
+    </div>
+    
+  </div>
+</main>
+
+<script nonce="<%= nonce %>">
+  // Pass configuration variables to JS securely via Nonce block
+  window.__CSRF = '<%= csrfToken %>';
+</script>
+<script nonce="<%= nonce %>">
+  // Specific handler just for the Details page actions so it operates seamlessly!
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('changeStatusBtn');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const orderId = btn.dataset.id;
+        const newStatus = btn.dataset.status;
+        changeStatus(orderId, newStatus, btn.textContent.trim());
+      });
+    }
+  });
+</script>
+<script src="/js/orders.js"></script>
+
+<%- include('../layouts/footer') %>

@@ -1,0 +1,65 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container">
+  <!-- Animated background orbs (preserved from original) -->
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <div class="dashboard-layout">
+    
+    <!-- 1) ORDERS SECTION -->
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h2 class="section-title">الطلبات</h2>
+        <a href="/orders" class="btn-more">إدارة الطلبات</a>
+      </div>
+      
+      <div class="stat-grid">
+        <%- include('../partials/_statCard', { label: 'قيد المراجعة', value: orderStats.pending_review }) %>
+        <%- include('../partials/_statCard', { label: 'قيد التحضير', value: orderStats.pending_preparation }) %>
+        <%- include('../partials/_statCard', { label: 'قيد التوصيل', value: orderStats.pending_delivery }) %>
+        <%- include('../partials/_statCard', { label: 'تمت', value: orderStats.completed, color: 'success' }) %>
+      </div>
+    </section>
+
+    <!-- 2) INVENTORY SECTION -->
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h2 class="section-title">المخزون</h2>
+      </div>
+      
+      <div class="category-grid">
+        <% categories.forEach(cat => { %>
+          <%- include('../partials/_categoryCard', { label: cat.label, href: '/inventory/' + cat.slug }) %>
+        <% }) %>
+      </div>
+    </section>
+
+    <!-- 3) SALES & EXPENSES SECTION (Full Width) -->
+    <section class="dashboard-section sales-panel">
+      <div class="section-header">
+        <h2 class="section-title">المبيعات والمصاريف</h2>
+        <a href="/analytics" class="btn-more">التفاصيل</a>
+      </div>
+
+      <div class="sales-grid">
+        <div class="sales-item">
+          <span class="sales-label">إجمالي المبيعات</span>
+          <span class="sales-amount"><%= salesTotal.toLocaleString() %> ج.م</span>
+        </div>
+        <div class="sales-item">
+          <span class="sales-label">المصاريف</span>
+          <span class="sales-amount" style="color: var(--error);"><%= expenses.toLocaleString() %> ج.م</span>
+        </div>
+        <div class="sales-item profit-total">
+          <span class="sales-label">الربح الصافي</span>
+          <span class="sales-amount"><%= profit.toLocaleString() %> ج.م</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<%- include('../layouts/footer') %>

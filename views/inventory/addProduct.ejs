@@ -1,0 +1,82 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width: 100%; max-width: 800px; margin: 0 auto; position: relative; z-index: 1;">
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="/inventory">المخزون</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="/inventory/<%= sectionSlug %>"><%= sectionLabel %></a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="/inventory/<%= sectionSlug %>/<%= categorySlug %>"><%= item.name %></a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">إضافة منتج</span>
+      </nav>
+      <h1>إضافة منتج في: <%= item.name %></h1>
+      <p style="color: var(--gray-400); margin-top: 8px;">القسم: <%= sectionLabel %> | يتم الربط تلقائياً مع الصنف</p>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="message-area error" style="display: block; margin-bottom: 20px; background: var(--error); color: white; padding: 12px; border-radius: 8px;">
+        <%= error %>
+      </div>
+    <% } %>
+
+    <section class="dashboard-section">
+      <form action="/inventory/<%= sectionSlug %>/<%= categorySlug %>/products/add?_csrf=<%= csrfToken %>" method="POST" enctype="multipart/form-data" id="addProductForm" style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Hidden itemId field - auto-set from URL -->
+        <input type="hidden" name="itemId" value="<%= item._id %>">
+
+
+        <div class="form-group">
+          <label for="name" style="color: var(--gray-50); margin-bottom: 8px; display: block;">اسم المنتج *</label>
+          <input type="text" id="name" name="name" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white;" placeholder="أدخل اسم المنتج">
+        </div>
+
+        <div class="form-group">
+          <label for="description" style="color: var(--gray-50); margin-bottom: 8px; display: block;">الوصف *</label>
+          <textarea id="description" name="description" required rows="4" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white;" placeholder="أدخل وصف المنتج"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label style="color: var(--gray-50); margin-bottom: 8px; display: block;">المقاسات والكمية (Sizes & Quantities)</label>
+          <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+            <input type="text" id="sizeInput" placeholder="المقاس (مثال: XL)" style="flex: 1; min-width: 100px; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white;">
+            <input type="number" id="qtyInput" placeholder="الكمية" min="1" step="1" style="width: 100px; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white;">
+            <button type="button" id="addSizeBtn" style="background: var(--primary); color: white; padding: 12px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; white-space: nowrap;">إضافة مقاس</button>
+          </div>
+          <!-- UI List for displaying added sizes -->
+          <div id="sizesList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          <!-- Hidden container for actual form inputs -->
+          <div id="sizesHiddenInputs"></div>
+        </div>
+
+        <div style="display: flex; gap: 20px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="price" style="color: var(--gray-50); margin-bottom: 8px; display: block;">السعر *</label>
+            <input type="number" id="price" name="price" step="0.01" min="0" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white;" placeholder="0.00">
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+            <label for="discount" style="color: var(--gray-50); margin-bottom: 8px; display: block;">الخصم</label>
+            <input type="number" id="discount" name="discount" step="0.01" min="0" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white;" placeholder="0.00 (اختياري)">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="images" style="color: var(--gray-50); margin-bottom: 8px; display: block;">الصور (أقصى حجم إجمالي 5MB)</label>
+          <input type="file" id="images" name="images" multiple accept="image/*" style="width: 100%; padding: 12px; border-radius: 8px; background: var(--surface-light); border: 1px solid var(--surface-glass-border); color: white; cursor: pointer;">
+        </div>
+
+        <button type="submit" id="submitBtn" style="background: var(--primary); color: white; border: none; padding: 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 1.1rem;">إضافة المنتج</button>
+      </form>
+    </section>
+  </div>
+<script src="/js/inventory.js"></script>
+
+<%- include('../layouts/footer') %>

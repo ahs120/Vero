@@ -1,0 +1,104 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+
+
+<main class="dashboard-container config-data" data-category="<%= category %>" data-csrf="<%= csrfToken %>">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width: 100%; max-width: 800px; margin: 0 auto; position: relative; z-index: 1;">
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <span>المخزون</span>
+      </nav>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1><%= categoryLabel %></h1>
+        <a href="/inventory/<%= category %>/add" class="add-product-btn" style="background: var(--primary); color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: bold;">+ إضافة منتج</a>
+      </div>
+    </div>
+
+
+    <section class="dashboard-section" style="margin-top: 40px;">
+      <div class="section-header">
+        <h2 class="section-title">قائمة المنتجات (Products)</h2>
+      </div>
+
+      <% if (products && products.length > 0) { %>
+        <div class="products-list" style="display: flex; flex-direction: column; gap: 16px;">
+          <% products.forEach(product => { %>
+            <%
+              // Compute total stock from sizes array (handles both old string format and new object format)
+              let totalStock = 0;
+              if (product.sizes && product.sizes.length > 0) {
+                product.sizes.forEach(function(s) {
+                  if (typeof s === 'object' && s !== null && typeof s.quantity === 'number') {
+                    totalStock += s.quantity;
+                  } else {
+                    totalStock += 1; // legacy string sizes count as 1 each
+                  }
+                });
+              }
+            %>
+            <div class="product-row"
+                 data-product-id="<%= product._id %>"
+                 style="display: flex; align-items: center; justify-content: space-between; background: var(--surface-light); padding: 16px; border-radius: 12px; border: 1px solid var(--surface-glass-border);">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <% if (product.images && product.images.length > 0) { %>
+                  <img src="<%= product.images[0] %>" alt="<%= product.name %>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                <% } else { %>
+                  <div style="width: 60px; height: 60px; background: var(--gray-800); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px;">بدون صورة</div>
+                <% } %>
+                <div>
+                  <h3 style="margin: 0; font-size: 1.1rem; color: var(--gray-50);"><%= product.name %></h3>
+                  <p style="margin: 4px 0 0; font-size: 0.9rem; color: var(--gray-400);"><%= product.price %> ج.م</p>
+                  <% if (totalStock > 0) { %>
+                    <span class="stock-badge">المخزون: <%= totalStock %> قطعة</span>
+                  <% } else { %>
+                    <span class="stock-badge stock-badge--muted">غير محدد</span>
+                  <% } %>
+                </div>
+              </div>
+              <div class="product-actions" style="display: flex; gap: 8px;">
+                <button class="view-btn" data-action="view" data-product-id="<%= product._id %>" style="background: var(--gray-600); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">عرض</button>
+                <button class="edit-btn" data-action="edit" data-product-id="<%= product._id %>" style="background: var(--primary-light); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">تعديل</button>
+                <div class="delete-wrapper" style="position: relative; display: inline-block;">
+                  <button class="delete-request-btn" data-action="delete-request" data-product-id="<%= product._id %>" style="background: var(--error); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">حذف</button>
+                  <div class="confirm-overlay" style="display: none; position: absolute; top:0; right:0; width: 250px; background: var(--surface); padding: 6px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); gap: 8px; align-items: center;">
+                    <span class="countdown-text" style="color: var(--error); font-weight: bold;">3</span>
+                    <button class="confirm-delete-btn" disabled data-action="confirm-delete" data-product-id="<%= product._id %>" style="background: var(--error); color: white; border: none; padding: 4px 8px; border-radius: 4px; opacity: 0.5; cursor: not-allowed;">تأكيد</button>
+                    <button class="cancel-delete-btn" data-action="cancel-delete" style="background: var(--gray-600); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">إلغاء</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-state" style="text-align: center; padding: 40px; color: var(--gray-500);">
+          <p>لا توجد منتجات حالياً في هذا القسم.</p>
+        </div>
+      <% } %>
+    </section>
+
+    <!-- Category Switcher (Quick Access) -->
+    <div class="category-switcher" style="margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+      <% categories.filter(c => c.slug !== category).forEach(c => { %>
+        <a href="/inventory/<%= c.slug %>" class="btn-more"><%= c.label %></a>
+      <% }) %>
+    </div>
+  </div>
+<script nonce="<%= nonce %>">
+  // Product data for the View modal — embedded as JS to avoid HTML-attribute escaping issues
+  window.__productsData = {
+    <% products.forEach((product, index) => { %>
+      "<%= product._id %>": <%- JSON.stringify({ _id: String(product._id), name: product.name, description: product.description, category: product.category, sizes: product.sizes || [], price: product.price, discount: product.discount || 0, images: product.images || [], createdAt: product.createdAt }) %><%= index < products.length - 1 ? ',' : '' %>
+    <% }) %>
+  };
+</script>
+<script src="/js/category.js"></script>
+
+</main>
+
+<%- include('../layouts/footer') %>

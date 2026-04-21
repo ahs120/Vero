@@ -1,0 +1,152 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container config-data" data-category="<%= sectionSlug %>" data-category-slug="<%= item.slug %>" data-csrf="<%= csrfToken %>">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="inv-page" style="width:100%;max-width:900px;margin:0 auto;position:relative;z-index:1;">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a href="/dashboard">لوحة التحكم</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="/inventory">المخزون</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="/inventory/<%= sectionSlug %>"><%= sectionLabel %></a>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current"><%= item.name %></span>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="inv-page-header">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <% if (item.image) { %>
+          <img src="<%= item.image %>" alt="<%= item.name %>" class="inv-item-thumb">
+        <% } %>
+        <div>
+          <h1 class="inv-page-title"><%= item.name %></h1>
+          <p class="inv-page-subtitle">
+            <%= sectionLabel %> &mdash;
+            <%= item.season === 'summer' ? 'صيف' : item.season === 'winter' ? 'شتاء' : item.season === 'autumn' ? 'خريف' : 'ربيع' %>
+            &mdash; <%= total %> منتج
+          </p>
+        </div>
+      </div>
+      <a href="/inventory/<%= sectionSlug %>/<%= item.slug %>/products/add" class="inv-btn inv-btn--primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        إضافة منتج
+      </a>
+    </div>
+
+    <!-- Products List -->
+    <section class="inv-section" style="margin-top:24px;">
+      <div class="inv-section-header">
+        <h2 class="inv-section-title">المنتجات</h2>
+        <span class="inv-count"><%= total %> منتج</span>
+      </div>
+
+      <% if (products && products.length > 0) { %>
+        <div class="products-list inv-list">
+          <% products.forEach(function(product) { %>
+            <%
+              let totalStock = 0;
+              if (product.sizes && product.sizes.length > 0) {
+                product.sizes.forEach(function(s) {
+                  if (typeof s === 'object' && s !== null && typeof s.quantity === 'number') {
+                    totalStock += s.quantity;
+                  } else {
+                    totalStock += 1;
+                  }
+                });
+              }
+            %>
+            <div class="product-row inv-card inv-card--row" data-product-id="<%= product._id %>">
+              <div class="inv-card-img">
+                <% if (product.images && product.images.length > 0) { %>
+                  <img src="<%= product.images[0] %>" alt="<%= product.name %>">
+                <% } else { %>
+                  <div class="inv-card-placeholder">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                  </div>
+                <% } %>
+              </div>
+              <div class="inv-card-body">
+                <span class="inv-card-title"><%= product.name %></span>
+                <div class="inv-card-meta">
+                  <span class="inv-badge inv-badge--price"><%= product.price %> ج.م</span>
+                  <% if (product.discount && product.discount > 0) { %>
+                    <span class="inv-badge inv-badge--discount"><%= product.discount %>% خصم</span>
+                  <% } %>
+                  <% if (totalStock > 0) { %>
+                    <span class="inv-badge inv-badge--stock">المخزون: <%= totalStock %></span>
+                  <% } else { %>
+                    <span class="inv-badge inv-badge--muted">غير محدد</span>
+                  <% } %>
+                </div>
+              </div>
+              <div class="product-actions inv-card-actions">
+                <button class="view-btn inv-btn-sm inv-btn-sm--view" data-action="view" data-product-id="<%= product._id %>" title="عرض">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <a href="/inventory/<%= sectionSlug %>/<%= item.slug %>/products/<%= product._id %>/edit" class="inv-btn-sm inv-btn-sm--edit" title="تعديل">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </a>
+                <div class="delete-wrapper" style="position:relative;display:inline-block;">
+                  <button class="delete-request-btn inv-btn-sm inv-btn-sm--delete" data-action="delete-request" data-product-id="<%= product._id %>" title="حذف">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                  <div class="confirm-overlay" style="display:none;position:absolute;top:0;right:0;width:250px;background:var(--surface);padding:6px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.5);gap:8px;align-items:center;z-index:10;">
+                    <span class="countdown-text" style="color:var(--error);font-weight:bold;">3</span>
+                    <button class="confirm-delete-btn" disabled data-action="confirm-delete" data-product-id="<%= product._id %>" style="background:var(--error);color:white;border:none;padding:4px 8px;border-radius:4px;opacity:0.5;cursor:not-allowed;">تأكيد</button>
+                    <button class="cancel-delete-btn" data-action="cancel-delete" style="background:var(--gray-600);color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;">إلغاء</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+        <!-- Pagination -->
+        <% if (pages > 1) { %>
+          <div class="inv-pagination">
+            <% if (page > 1) { %>
+              <a href="/inventory/<%= sectionSlug %>/<%= item.slug %>?page=<%= page - 1 %>" class="inv-page-btn">&laquo; السابق</a>
+            <% } %>
+            <% for (let p = 1; p <= pages; p++) { %>
+              <a
+                href="/inventory/<%= sectionSlug %>/<%= item.slug %>?page=<%= p %>"
+                class="inv-page-btn<%= p === page ? ' inv-page-btn--active' : '' %>"
+              ><%= p %></a>
+            <% } %>
+            <% if (page < pages) { %>
+              <a href="/inventory/<%= sectionSlug %>/<%= item.slug %>?page=<%= page + 1 %>" class="inv-page-btn">التالي &raquo;</a>
+            <% } %>
+          </div>
+        <% } %>
+
+      <% } else { %>
+        <div class="inv-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <p>لا توجد منتجات في هذا الصنف بعد</p>
+          <a href="/inventory/<%= sectionSlug %>/<%= item.slug %>/products/add" class="inv-btn inv-btn--primary" style="margin-top:16px;">+ إضافة أول منتج</a>
+        </div>
+      <% } %>
+    </section>
+
+    <!-- Back Link -->
+    <div style="margin-top:24px;">
+      <a href="/inventory/<%= sectionSlug %>" class="inv-back-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        العودة إلى أصناف <%= sectionLabel %>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<script type="application/json" id="products-data">
+  <%- JSON.stringify(products) %>
+</script>
+<script src="/js/category.js"></script>
+
+<%- include('../layouts/footer') %>

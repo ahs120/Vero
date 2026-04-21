@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="<%= description %>" />
+    <title><%= title %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/css/customer.css" />
+  </head>
+  <body>
+    <div class="page-container">
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step active">
+          <div class="step-circle">1</div>
+          <span class="step-label">البيانات</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-circle">2</div>
+          <span class="step-label">المنتجات</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-circle">3</div>
+          <span class="step-label">الدفع</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-circle">4</div>
+          <span class="step-label">التأكيد</span>
+        </div>
+      </div>
+
+      <div class="page-header">
+        <a href="/order" class="back-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </a>
+        <h1 class="page-title">بيانات العميل</h1>
+      </div>
+
+      <form id="customer-info-form" class="form-card" novalidate>
+        <!-- Basic Info Section -->
+        <div class="form-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            المعلومات الأساسية
+          </h2>
+
+          <div class="form-group">
+            <label for="fullName" class="form-label">الاسم الكامل <span class="required">*</span></label>
+            <input type="text" id="fullName" name="fullName" class="form-input" placeholder="أدخل اسمك الكامل" required maxlength="200" autocomplete="name" />
+            <div class="field-error" id="fullName-error"></div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="primaryPhone" class="form-label">رقم الهاتف <span class="required">*</span></label>
+              <input type="tel" id="primaryPhone" name="primaryPhone" class="form-input" placeholder="01012345678" required maxlength="11" autocomplete="tel" dir="ltr" />
+              <div class="field-error" id="primaryPhone-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="secondaryPhone" class="form-label">رقم بديل</label>
+              <input type="tel" id="secondaryPhone" name="secondaryPhone" class="form-input" placeholder="01234567890" maxlength="11" dir="ltr" />
+              <div class="field-error" id="secondaryPhone-error"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address Section -->
+        <div class="form-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            عنوان التوصيل
+          </h2>
+
+          <!-- Map -->
+          <div class="form-group">
+            <label class="form-label">حدد موقعك على الخريطة</label>
+            <div id="map" class="map-container"></div>
+            <input type="hidden" id="lat" name="lat" />
+            <input type="hidden" id="lng" name="lng" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="governorate" class="form-label">المحافظة <span class="required">*</span></label>
+              <select id="governorate" name="governorate" class="form-select" required>
+                <option value="">اختر المحافظة</option>
+                <% governorates.forEach(function(gov) { %>
+                  <option value="<%= gov.name %>" data-areas="<%= JSON.stringify(gov.areas) %>"><%= gov.name %></option>
+                <% }); %>
+              </select>
+              <div class="field-error" id="governorate-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="area" class="form-label">المنطقة <span class="required">*</span></label>
+              <select id="area" name="area" class="form-select" required disabled>
+                <option value="">اختر المنطقة</option>
+              </select>
+              <div class="field-error" id="area-error"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="detailedAddress" class="form-label">العنوان التفصيلي <span class="required">*</span></label>
+            <textarea id="detailedAddress" name="detailedAddress" class="form-textarea" placeholder="الشارع، أقرب معلم..." required maxlength="500" rows="3"></textarea>
+            <div class="field-error" id="detailedAddress-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="landmark" class="form-label">علامة مميزة</label>
+            <input type="text" id="landmark" name="landmark" class="form-input" placeholder="بجوار..." maxlength="200" />
+          </div>
+
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="buildingName" class="form-label">المبنى <span class="required">*</span></label>
+              <input type="text" id="buildingName" name="buildingName" class="form-input" placeholder="رقم / اسم" required maxlength="100" />
+              <div class="field-error" id="buildingName-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="floorNumber" class="form-label">الطابق <span class="required">*</span></label>
+              <input type="text" id="floorNumber" name="floorNumber" class="form-input" placeholder="مثال: 3" required maxlength="20" />
+              <div class="field-error" id="floorNumber-error"></div>
+            </div>
+            <div class="form-group">
+              <label for="apartmentNumber" class="form-label">الشقة <span class="required">*</span></label>
+              <input type="text" id="apartmentNumber" name="apartmentNumber" class="form-input" placeholder="مثال: 5" required maxlength="20" />
+              <div class="field-error" id="apartmentNumber-error"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Honeypot (anti-bot) -->
+        <div style="display:none;" aria-hidden="true">
+          <input type="text" name="_hp_email" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <button type="submit" class="btn-primary btn-full" id="btn-submit-info">
+          <span class="btn-text">طلب توصيل</span>
+          <span class="btn-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+      </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/js/customerInfo.js"></script>
+  </body>
+</html>

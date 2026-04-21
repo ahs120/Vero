@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="<%= description %>" />
+    <title><%= title %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/customer.css" />
+  </head>
+  <body>
+    <div class="page-container">
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step completed">
+          <div class="step-circle">✓</div>
+          <span class="step-label">البيانات</span>
+        </div>
+        <div class="step-line active-line"></div>
+        <div class="step completed">
+          <div class="step-circle">✓</div>
+          <span class="step-label">المنتجات</span>
+        </div>
+        <div class="step-line active-line"></div>
+        <div class="step active">
+          <div class="step-circle">3</div>
+          <span class="step-label">الدفع</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-circle">4</div>
+          <span class="step-label">التأكيد</span>
+        </div>
+      </div>
+
+      <div class="page-header">
+        <a href="/order/products" class="back-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </a>
+        <h1 class="page-title">طريقة الدفع</h1>
+      </div>
+
+      <div class="payment-container">
+        <!-- Order Summary Recap -->
+        <div class="payment-summary-card">
+          <h2 class="card-title">ملخص الطلب</h2>
+          <div class="summary-row">
+            <span>الإجمالي</span>
+            <span id="payment-total">0 ج.م</span>
+          </div>
+          <div class="summary-row" id="promo-row" style="display:none;">
+            <span>خصم كود الخصم</span>
+            <span id="payment-promo-discount" class="discount-text">- 0 ج.م</span>
+          </div>
+          <div class="summary-row summary-total">
+            <span>المطلوب</span>
+            <span id="payment-final">0 ج.م</span>
+          </div>
+        </div>
+
+        <!-- Payment Method Cards -->
+        <div class="payment-methods">
+          <h2 class="card-title">اختر طريقة الدفع</h2>
+
+          <label class="payment-card" id="payment-card-instapay">
+            <input type="radio" name="paymentMethod" value="instapay" class="payment-radio" />
+            <div class="payment-card-content">
+              <div class="payment-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </div>
+              <div class="payment-info">
+                <span class="payment-name">InstaPay</span>
+                <span class="payment-desc">تحويل فوري</span>
+              </div>
+              <div class="payment-check"></div>
+            </div>
+          </label>
+
+          <label class="payment-card" id="payment-card-wallet">
+            <input type="radio" name="paymentMethod" value="mobile_wallet" class="payment-radio" />
+            <div class="payment-card-content">
+              <div class="payment-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M16 8v8M8 8v8M12 8v8"/></svg>
+              </div>
+              <div class="payment-info">
+                <span class="payment-name">المحفظة الإلكترونية</span>
+                <span class="payment-desc">فودافون كاش / اتصالات كاش</span>
+              </div>
+              <div class="payment-check"></div>
+            </div>
+          </label>
+
+          <label class="payment-card" id="payment-card-cod">
+            <input type="radio" name="paymentMethod" value="cash_on_delivery" class="payment-radio" />
+            <div class="payment-card-content">
+              <div class="payment-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <div class="payment-info">
+                <span class="payment-name">الدفع عند الاستلام</span>
+                <span class="payment-desc">يتطلب عربون 50%</span>
+              </div>
+              <div class="payment-check"></div>
+            </div>
+          </label>
+        </div>
+
+        <!-- COD Deposit Section (shows only for COD) -->
+        <div id="cod-deposit-section" class="deposit-card" style="display:none;">
+          <div class="deposit-warning">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+              <strong>مطلوب عربون 50%</strong>
+              <p>المبلغ المطلوب: <span id="deposit-amount" class="highlight">0 ج.م</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Payment Proof -->
+        <div id="upload-section" class="upload-card">
+          <h2 class="card-title">إثبات الدفع</h2>
+          <p class="upload-desc">ارفع صورة / لقطة شاشة لعملية الدفع</p>
+
+          <div class="upload-area" id="upload-area">
+            <input type="file" id="payment-proof-file" accept="image/jpeg,image/png,image/webp" style="display:none;" />
+            <div class="upload-placeholder" id="upload-placeholder">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p>اضغط لرفع صورة</p>
+              <span class="upload-hint">JPEG, PNG, WebP — حد أقصى 2 ميجا</span>
+            </div>
+            <div class="upload-preview" id="upload-preview" style="display:none;">
+              <img id="preview-img" src="" alt="Preview" />
+              <button type="button" id="btn-remove-upload" class="btn-remove">✕</button>
+            </div>
+          </div>
+          <div id="upload-error" class="field-error"></div>
+        </div>
+
+        <button type="button" id="btn-submit-order" class="btn-primary btn-full" disabled>
+          <span class="btn-text">إتمام الطلب</span>
+          <span class="btn-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <script src="/js/payment.js"></script>
+  </body>
+</html>

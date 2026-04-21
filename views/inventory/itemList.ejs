@@ -1,0 +1,108 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container" data-csrf="<%= csrfToken %>">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width:100%;max-width:900px;margin:0 auto;position:relative;z-index:1;">
+
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <span>المخزون — <%= genderLabel %></span>
+      </nav>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <h1><%= genderLabel %></h1>
+        <a href="/inventory/add-item?gender=<%= gender %>" class="add-product-btn" style="background:var(--primary);color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:0.95rem;">
+          + إضافة صنف
+        </a>
+      </div>
+    </div>
+
+    <!-- Gender/Section Quick Switch -->
+    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+      <% [['men','رجالي'],['women','حريمي'],['kids','أطفال'],['perfumes','عطور'],['sports','رياضي']].forEach(function(g){ %>
+        <a
+          href="/inventory/items/<%= g[0] %>"
+          style="padding:8px 18px;border-radius:20px;text-decoration:none;font-weight:600;font-size:0.9rem;
+            background:<%= gender === g[0] ? 'var(--primary)' : 'var(--surface-light)' %>;
+            color:<%= gender === g[0] ? 'white' : 'var(--gray-300)' %>;
+            border:1px solid <%= gender === g[0] ? 'transparent' : 'var(--surface-glass-border)' %>;"
+        >
+          <%= g[1] %>
+        </a>
+      <% }); %>
+    </div>
+
+    <section class="dashboard-section" style="margin-top:24px;">
+      <div class="section-header">
+        <h2 class="section-title">الأصناف (<%= total %>)</h2>
+      </div>
+
+      <% if (items && items.length > 0) { %>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <% items.forEach(function(item) { %>
+            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-light);padding:16px;border-radius:12px;border:1px solid var(--surface-glass-border);">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <% if (item.image) { %>
+                  <img src="<%= item.image %>" alt="<%= item.name %>" style="width:56px;height:56px;object-fit:cover;border-radius:8px;">
+                <% } else { %>
+                  <div style="width:56px;height:56px;background:var(--gray-800);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gray-500);">لا توجد صورة</div>
+                <% } %>
+                <div>
+                  <h3 style="margin:0;font-size:1rem;color:var(--gray-50);"><%= item.name %></h3>
+                  <p style="margin:4px 0 0;font-size:0.82rem;color:var(--gray-400);">
+                    <%= item.season === 'summer' ? 'صيف' : item.season === 'winter' ? 'شتاء' : item.season === 'autumn' ? 'خريف' : 'ربيع' %>
+                  </p>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                <a
+                  href="/inventory/item/<%= item._id %>/edit"
+                  style="background:var(--primary-light);color:white;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:0.88rem;"
+                >تعديل</a>
+                <a
+                  href="/inventory/item/<%= item._id %>/products"
+                  style="background:var(--gray-600);color:white;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:0.88rem;"
+                >المنتجات المتاحة</a>
+                <button
+                  class="delete-item-btn"
+                  data-action="delete-item"
+                  data-item-id="<%= item._id %>"
+                  data-item-name="<%= item.name %>"
+                  style="background:var(--error);color:white;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.88rem;"
+                >حذف</button>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <!-- Pagination -->
+        <% if (pages > 1) { %>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:24px;flex-wrap:wrap;">
+            <% for (let p = 1; p <= pages; p++) { %>
+              <a
+                href="/inventory/items/<%= gender %>?page=<%= p %>"
+                style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:0.9rem;
+                  background:<%= p === currentPage ? 'var(--primary)' : 'var(--surface-light)' %>;
+                  color:<%= p === currentPage ? 'white' : 'var(--gray-300)' %>;
+                  border:1px solid <%= p === currentPage ? 'transparent' : 'var(--surface-glass-border)' %>;"
+              ><%= p %></a>
+            <% } %>
+          </div>
+        <% } %>
+
+      <% } else { %>
+        <div id="empty-state" style="text-align:center;padding:48px;color:var(--gray-500);">
+          <p style="font-size:1rem;">لا توجد أصناف حالياً في هذا التصنيف.</p>
+          <a href="/inventory/add-item?gender=<%= gender %>" style="display:inline-block;margin-top:16px;background:var(--primary);color:white;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">+ إضافة أول صنف</a>
+        </div>
+      <% } %>
+    </section>
+
+  </div>
+</main>
+
+<script src="/js/itemList.js"></script>
+<%- include('../layouts/footer') %>

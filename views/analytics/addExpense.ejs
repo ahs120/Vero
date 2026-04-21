@@ -1,0 +1,137 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <div class="category-page" style="width:100%;max-width:700px;margin:0 auto;position:relative;z-index:1;">
+
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <a href="/analytics">التحليلات</a>
+        <span>/</span>
+        <span>إضافة مصروف</span>
+      </nav>
+      <h1>إضافة مصروف جديد</h1>
+    </div>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="message-area error" style="display:block;margin-bottom:20px;background:var(--error);color:white;padding:12px 16px;border-radius:8px;">
+        <%= error %>
+      </div>
+    <% } %>
+
+    <section class="dashboard-section">
+      <form
+        action="/analytics/add-expense?_csrf=<%= csrfToken %>"
+        method="POST"
+        enctype="multipart/form-data"
+        id="addExpenseForm"
+        style="display:flex;flex-direction:column;gap:20px;"
+        novalidate
+      >
+
+        <!-- Amount -->
+        <div class="form-group">
+          <label for="amount" style="color:var(--gray-50);margin-bottom:8px;display:block;">
+            المبلغ (ج.م) <span style="color:var(--error);">*</span>
+          </label>
+          <input
+            type="number"
+            id="amount"
+            name="amount"
+            required
+            min="1"
+            step="0.01"
+            value="<%= typeof formData !== 'undefined' ? (formData.amount || '') : '' %>"
+            placeholder="أدخل المبلغ"
+            style="width:100%;padding:12px;border-radius:8px;background:var(--surface-light);border:1px solid var(--surface-glass-border);color:white;"
+          >
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label for="reason" style="color:var(--gray-50);margin-bottom:8px;display:block;">
+            السبب <span style="color:var(--error);">*</span>
+          </label>
+          <textarea
+            id="reason"
+            name="reason"
+            required
+            maxlength="300"
+            rows="3"
+            placeholder="سبب المصروف"
+            style="width:100%;padding:12px;border-radius:8px;background:var(--surface-light);border:1px solid var(--surface-glass-border);color:white;resize:vertical;"
+          ><%= typeof formData !== 'undefined' ? (formData.reason || '') : '' %></textarea>
+        </div>
+
+        <!-- Invoice Image -->
+        <div class="form-group">
+          <label for="invoice" style="color:var(--gray-50);margin-bottom:8px;display:block;">
+            صورة الفاتورة (اختياري — أقصى حجم 1 ميجابايت)
+          </label>
+          <input
+            type="file"
+            id="invoice"
+            name="invoice"
+            accept="image/*"
+            style="width:100%;padding:12px;border-radius:8px;background:var(--surface-light);border:1px solid var(--surface-glass-border);color:white;cursor:pointer;"
+          >
+          <div id="invoicePreview" style="margin-top:10px;display:none;">
+            <img id="previewImg" src="" alt="معاينة الفاتورة" style="max-width:200px;border-radius:8px;border:1px solid var(--surface-glass-border);">
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          id="submitBtn"
+          style="background:var(--primary);color:white;border:none;padding:16px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:1.1rem;"
+        >
+          حفظ المصروف
+        </button>
+
+      </form>
+    </section>
+  </div>
+</main>
+
+<script nonce="<%= nonce %>">
+  document.getElementById('invoice').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('يجب أن يكون الملف صورة');
+      this.value = '';
+      return;
+    }
+    if (file.size > 1 * 1024 * 1024) {
+      alert('حجم الصورة يجب أن يكون أقل من 1 ميجابايت');
+      this.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('invoicePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('addExpenseForm').addEventListener('submit', function (e) {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const reason = document.getElementById('reason').value.trim();
+    if (!amount || amount < 1) {
+      e.preventDefault();
+      alert('يجب أن يكون المبلغ أكبر من صفر');
+      return;
+    }
+    if (!reason) {
+      e.preventDefault();
+      alert('يرجى إدخال سبب المصروف');
+    }
+  });
+</script>
+
+<%- include('../layouts/footer') %>

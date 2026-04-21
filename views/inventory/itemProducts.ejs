@@ -1,0 +1,98 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<%
+  // Gender/Section label helper - handles all 5 categories
+  const genderLabelMap = {
+    'men': 'رجالي',
+    'women': 'حريمي',
+    'kids': 'أطفال',
+    'perfumes': 'عطور',
+    'sports': 'رياضي'
+  };
+  const genderLabel = genderLabelMap[item.gender] || item.gender;
+%>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width:100%;max-width:900px;margin:0 auto;position:relative;z-index:1;">
+
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <a href="/inventory/items/<%= item.gender %>"><%= genderLabel %></a>
+        <span>/</span>
+        <span>منتجات: <%= item.name %></span>
+      </nav>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <% if (item.image) { %>
+          <img src="<%= item.image %>" alt="<%= item.name %>" style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--surface-glass-border);">
+        <% } %>
+        <div>
+          <h1 style="margin:0;"><%= item.name %></h1>
+          <p style="margin:4px 0 0;color:var(--gray-400);font-size:0.9rem;">
+            <%= genderLabel %> —
+            <%= item.season === 'summer' ? 'صيف' : item.season === 'winter' ? 'شتاء' : item.season === 'autumn' ? 'خريف' : 'ربيع' %>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <section class="dashboard-section" style="margin-top:32px;">
+      <div class="section-header">
+        <h2 class="section-title">المنتجات المرتبطة بهذا الصنف</h2>
+      </div>
+
+      <% if (products && products.length > 0) { %>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <% products.forEach(function(product) { %>
+            <%
+              let totalStock = 0;
+              if (product.sizes && product.sizes.length > 0) {
+                product.sizes.forEach(function(s) {
+                  if (typeof s === 'object' && s !== null && typeof s.quantity === 'number') {
+                    totalStock += s.quantity;
+                  } else {
+                    totalStock += 1;
+                  }
+                });
+              }
+            %>
+            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-light);padding:16px;border-radius:12px;border:1px solid var(--surface-glass-border);">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <% if (product.images && product.images.length > 0) { %>
+                  <img src="<%= product.images[0] %>" alt="<%= product.name %>" style="width:54px;height:54px;object-fit:cover;border-radius:8px;">
+                <% } else { %>
+                  <div style="width:54px;height:54px;background:var(--gray-800);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gray-500);">بدون صورة</div>
+                <% } %>
+                <div>
+                  <h3 style="margin:0;font-size:1rem;color:var(--gray-50);"><%= product.name %></h3>
+                  <p style="margin:4px 0 0;font-size:0.85rem;color:var(--gray-400);"><%= product.price %> ج.م</p>
+                  <% if (totalStock > 0) { %>
+                    <span class="stock-badge">المخزون: <%= totalStock %> قطعة</span>
+                  <% } %>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <a
+                  href="/inventory/<%= product.category %>/<%= item.slug %>/products/<%= product._id %>/edit"
+                  style="background:var(--primary-light);color:white;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:0.9rem;"
+                >تعديل</a>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <div style="text-align:center;padding:40px;color:var(--gray-500);">
+          <p>لا توجد منتجات مرتبطة بهذا الصنف بعد.</p>
+          <p style="font-size:0.9rem;margin-top:8px;">يمكنك ربط منتج موجود بهذا الصنف عبر تعديل المنتج وتعيين الصنف المرتبط به.</p>
+        </div>
+      <% } %>
+    </section>
+
+  </div>
+</main>
+
+<%- include('../layouts/footer') %>

@@ -1,0 +1,520 @@
+# Customer Order Flow System — Implementation Plan
+
+## Overview
+
+Build a **complete customer ordering flow** that is **strictly isolated** from the existing Vero Admin Dashboard. Customers navigate through 5 pages (Landing → Customer Info → Product Order → Payment → Confirmation) to place orders. All customer routes live under `/api/public/*` (API) and `/order/*` (pages). Admin routes remain under their existing `/admin/*`, `/dashboard/*` paths with JWT protection.
+
+> [!IMPORTANT]
+> **Strict Isolation**: Customer pages use a completely separate EJS layout (`customer-layout`), separate CSS (`customer.css`), separate route files, and separate API prefix (`/api/public/*`). No admin middleware, no admin cookies, no admin navigation will ever be accessible from or linked to the customer flow.
+
+---
+
+## User Review Required
+
+> [!WARNING]
+> **Google Maps API Key**: The map integration on the customer info page requires a Google Maps JavaScript API key. You will need to add `GOOGLE_MAPS_API_KEY=your-key-here` to your `.env` file. If you prefer, I can use **Leaflet.js + OpenStreetMap** instead (free, no API key needed).
+
+> [!IMPORTANT]
+> **Egypt-Specific Data**: The governorate/area dropdowns will be pre-populated with Egyptian governorates and their areas. Please confirm this matches your target market.
+
+> [!CAUTION]
+> **Promo Codes**: The system creates a `PromoCode` model managed exclusively via admin. You will need to seed promo codes via the database or a future admin UI. The customer flow will validate promo codes server-side only.
+
+---
+
+## Architecture Overview
+
+```mermaid
+graph TD
+    subgraph "Customer Flow (Public)"
+        L[Landing Page<br>/order] --> CI[Customer Info<br>/order/info]
+        CI --> PO[Product Order<br>/order/products]
+        PO --> PM[Payment Method<br>/order/payment]
+        PM --> CO[Order Confirmation<br>/order/confirm]
+    end
+
+    subgraph "API Layer"
+        A1[GET /api/public/products] 
+        A2[POST /api/public/promo/validate]
+        A3[POST /api/public/orders]
+        A4[POST /api/public/upload/payment-proof]
+    end
+
+    subgraph "Admin Dashboard (Protected)"
+        AD[Dashboard /dashboard]
+        AO[Orders /orders]
+        AI[Inventory /inventory]
+    end
+
+    PO --> A1
+    PO --> A2
+    CO --> A3
+    PM --> A4
+
+    A3 --> DB[(MongoDB)]
+    AD --> DB
+```
+
+---
+
+## Proposed Changes
+
+### 1. New Models
+
+---
+
+#### [NEW] [CustomerOrder.js](file:///d:/Vero-20-4vvv/models/CustomerOrder.js)
+
+New Mongoose schema for customer-submitted orders, completely separate from the existing admin `Order` model:
+
+```javascript
+{
+  orderCode: String,           // Auto-generated via Counter (e.g. "ORD-20260421-5")
+  
+  // Customer Info
+  customer: {
+    fullName: String,          // Required, sanitized
+    primaryPhone: String,      // Required, Egyptian format validation
+    secondaryPhone: String,    // Optional
+  },
+  
+  // Address
+  address: {
+    location: {
+      lat: Number,
+      lng: Number,
+    },
+    governorate: String,       // Required, from allowed list
+    area: String,              // Required, from allowed list per governorate
+    detailedAddress: String,   // Required, sanitized textarea
+    landmark: String,          // Optional
+    buildingName: String,      // Required
+    floorNumber: String,       // Required
+    apartmentNumber: String,   // Required
+  },
+  
+  // Cart Items
+  items: [{
+    productId: ObjectId (ref Product),
+    productName: String,
+    selectedSize: String,
+    quantity: Number,
+    priceBeforeDiscount: Number,
+    priceAfterDiscount: Number,
+  }],
+  
+  // Pricing
+  pricing: {
+    totalBeforeDiscount: Number,
+    totalAfterDiscount: Number,
+    promoCode: String | null,
+    promoDiscount: Number,     // Amount deducted by promo
+    finalTotal: Number,
+  },
+  
+  // Payment
+  payment: {
+    method: String,            // 'instapay' | 'mobile_wallet' | 'cash_on_delivery'
+    depositRequired: Number,   // 50% of total for COD
+    paymentProofPath: String,  // File path for uploaded screenshot
+  },
+  
+  status: String,              // Default: 'pending_review'
+  timestamps: true
+}
+```
+
+Indexes: `{ status: 1, createdAt: -1 }`, `{ orderCode: 1 }` (unique), `{ 'customer.primaryPhone': 1 }`
+
+---
+
+#### [NEW] [PromoCode.js](file:///d:/Vero-20-4vvv/models/PromoCode.js)
+
+```javascript
+{
+  code: String,                // Unique, uppercase, trimmed
+  discountType: String,        // 'percentage' | 'fixed'
+  discountValue: Number,       // e.g. 10 (= 10% or 10 EGP)
+  minOrderAmount: Number,      // Minimum order total to apply
+  maxUsage: Number,            // Max total uses
+  usedCount: Number,           // Current usage count
+  isActive: Boolean,
+  expiresAt: Date,
+  timestamps: true
+}
+```
+
+---
+
+### 2. New Data Configuration
+
+---
+
+#### [NEW] [egyptData.js](file:///d:/Vero-20-4vvv/config/egyptData.js)
+
+Static JSON mapping of Egyptian governorates to their areas/cities for the address dropdowns. Example:
+
+```javascript
+module.exports = {
+  governorates: [
+    { 
+      name: 'القاهرة',
+      nameEn: 'Cairo',
+      areas: ['مدينة نصر', 'المعادي', 'حلوان', 'مصر الجديدة', 'التجمع الخامس', ...]
+    },
+    { 
+      name: 'الجيزة',
+      nameEn: 'Giza', 
+      areas: ['الدقي', 'المهندسين', '6 أكتوبر', 'الشيخ زايد', ...]
+    },
+    // ... all 27 governorates
+  ]
+};
+```
+
+---
+
+### 3. New Middleware
+
+---
+
+#### [NEW] [customerValidation.js](file:///d:/Vero-20-4vvv/middleware/customerValidation.js)
+
+All validation rules for the customer order flow using `express-validator`:
+
+- **`customerInfoRules`** — Full name, phone format (Egyptian `01x-xxx-xxxx`), address fields
+- **`cartItemRules`** — Product ID format, quantity > 0, size validation
+- **`promoCodeRules`** — Code format (alphanumeric, max 20 chars)
+- **`paymentRules`** — Method enum, payment proof required for non-COD
+- **`orderSubmitRules`** — Complete order payload validation
+- **`validateCustomer`** — Result handler that returns JSON errors
+
+All rules include:
+- `.trim()` and `.escape()` for XSS prevention
+- String length limits to prevent DoS
+- Regex patterns for phone numbers
+- Type checking for numbers
+- ObjectId format validation for product references
+
+---
+
+#### [MODIFY] [upload.js](file:///d:/Vero-20-4vvv/middleware/upload.js)
+
+Add a new `uploadPaymentProof` multer instance:
+- Destination: `public/uploads/payment-proofs/`
+- File size limit: 2 MB
+- Image-only filter (JPEG, PNG, WebP)
+- Unique filename with timestamp
+
+---
+
+### 4. New Routes
+
+---
+
+#### [NEW] [publicPages.js](file:///d:/Vero-20-4vvv/routes/publicPages.js)
+
+Customer-facing page routes (serve EJS views):
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/order` | Landing page |
+| `GET` | `/order/info` | Customer info form |
+| `GET` | `/order/products` | Product listing + cart |
+| `GET` | `/order/payment` | Payment method selection |
+| `GET` | `/order/confirm` | Order confirmation |
+
+> No `verifyToken` middleware — these are public pages.
+
+---
+
+#### [NEW] [publicApi.js](file:///d:/Vero-20-4vvv/routes/publicApi.js)
+
+Customer-facing API endpoints:
+
+| Method | Path | Description | Validation |
+|--------|------|-------------|------------|
+| `GET` | `/api/public/products` | Get available products | Query sanitization |
+| `GET` | `/api/public/governorates` | Get governorate list | None (static data) |
+| `GET` | `/api/public/areas/:governorate` | Get areas for governorate | Param sanitization |
+| `POST` | `/api/public/promo/validate` | Validate promo code | `promoCodeRules` |
+| `POST` | `/api/public/orders` | Submit complete order | `orderSubmitRules` |
+| `POST` | `/api/public/upload/payment-proof` | Upload payment screenshot | File validation |
+
+All POST endpoints include:
+- Rate limiting (specific to public APIs)
+- Input validation middleware
+- CSRF exemption (since these are API endpoints without session forms — we'll use a separate anti-CSRF strategy with origin checking)
+
+---
+
+### 5. New Controllers
+
+---
+
+#### [NEW] [publicController.js](file:///d:/Vero-20-4vvv/controllers/publicController.js)
+
+Handles all customer-facing page rendering:
+- `renderLanding` — Landing page with logo + CTA button
+- `renderCustomerInfo` — Customer info form with governorate data
+- `renderProducts` — Product listing page
+- `renderPayment` — Payment method selection
+- `renderConfirmation` — Order confirmation/thank you page
+
+---
+
+#### [NEW] [publicApiController.js](file:///d:/Vero-20-4vvv/controllers/publicApiController.js)
+
+Handles all customer API logic:
+- `getProducts` — Fetch products with available sizes (lean query, field projection)
+- `getGovernorates` — Return static governorate list
+- `getAreas` — Return areas for a specific governorate
+- `validatePromoCode` — Server-side promo code validation
+- `uploadPaymentProof` — Handle payment proof upload, return file path
+- `submitOrder` — Full order submission with:
+  - Server-side price recalculation (never trust client prices)
+  - Promo code re-validation
+  - Atomic order code generation
+  - Stock availability check
+  - Order creation in MongoDB
+
+---
+
+### 6. New Services
+
+---
+
+#### [NEW] [customerOrderService.js](file:///d:/Vero-20-4vvv/services/customerOrderService.js)
+
+Business logic layer:
+- `calculateOrderPricing(items, promoCode)` — Recalculates all prices server-side from DB
+- `validatePromoCode(code, orderTotal)` — Checks code validity, expiration, usage limits
+- `applyPromoCode(code)` — Increments usage counter atomically
+- `createCustomerOrder(orderData)` — Creates order with generated code
+- `generateCustomerOrderCode()` — Atomic daily sequence via Counter model
+
+---
+
+### 7. New Views (Customer Flow)
+
+All customer views live in `views/customer/` — completely separate from admin views.
+
+---
+
+#### [NEW] [views/customer/layout.ejs](file:///d:/Vero-20-4vvv/views/customer/layout.ejs)
+
+Standalone HTML layout for customer pages:
+- Own `<head>` with customer-specific CSS
+- No admin nav, no admin scripts
+- RTL Arabic layout with Cairo font
+- Clean, modern design with step indicator
+
+---
+
+#### [NEW] [views/customer/landing.ejs](file:///d:/Vero-20-4vvv/views/customer/landing.ejs)
+
+Luxurious landing page:
+- Centered Vero logo (large, gradient)
+- "اطلب الآن" button with hover animation
+- Elegant background with subtle pattern
+
+---
+
+#### [NEW] [views/customer/info.ejs](file:///d:/Vero-20-4vvv/views/customer/info.ejs)
+
+Customer information form:
+- Step indicator (Step 1 of 4)
+- Basic info section: Full name, phone fields
+- Address section: Map embed + manual fields
+- Governorate → Area cascading dropdowns
+- Client-side validation with inline error messages
+- "طلب توصيل" submit button
+
+---
+
+#### [NEW] [views/customer/products.ejs](file:///d:/Vero-20-4vvv/views/customer/products.ejs)
+
+Product ordering page:
+- Step indicator (Step 2 of 4)
+- Left: Product grid with size/price selectors
+- Center: Cart table (product, size, qty, prices)
+- Right sidebar: Order summary + promo code input
+- Real-time total calculation
+- "تأكيد الطلب" button
+
+---
+
+#### [NEW] [views/customer/payment.ejs](file:///d:/Vero-20-4vvv/views/customer/payment.ejs)
+
+Payment method page:
+- Step indicator (Step 3 of 4)
+- Three payment options with radio cards:
+  - InstaPay
+  - Mobile Wallet
+  - Cash on Delivery
+- COD: Shows 50% deposit amount + upload field
+- Payment proof upload for deposit cases
+- "إتمام الدفع" button
+
+---
+
+#### [NEW] [views/customer/confirmation.ejs](file:///d:/Vero-20-4vvv/views/customer/confirmation.ejs)
+
+Confirmation page:
+- Step indicator (Step 4 of 4 — complete)
+- Success checkmark animation
+- Order code display
+- Order summary recap
+- "العودة للصفحة الرئيسية" button
+
+---
+
+### 8. New Frontend Assets
+
+---
+
+#### [NEW] [public/css/customer.css](file:///d:/Vero-20-4vvv/public/css/customer.css)
+
+Complete standalone CSS for customer flow:
+- CSS custom properties (tokens) — separate design system from admin
+- Premium dark theme with gold/amber accents
+- Glassmorphism cards
+- Step indicator component
+- Form styling with floating labels
+- Cart table styling
+- Payment card styling
+- Responsive breakpoints (mobile-first)
+- Smooth animations and transitions
+
+---
+
+#### [NEW] [public/js/customerInfo.js](file:///d:/Vero-20-4vvv/public/js/customerInfo.js)
+
+- Google Maps / Leaflet integration for location picker
+- Governorate → Area cascading dropdown logic
+- Client-side form validation
+- Session storage for customer data persistence across steps
+
+---
+
+#### [NEW] [public/js/productOrder.js](file:///d:/Vero-20-4vvv/public/js/productOrder.js)
+
+- Fetch and render products from `/api/public/products`
+- Add to cart / remove from cart logic
+- Quantity +/- controls
+- Size selection per product
+- Real-time price calculation
+- Promo code validation (AJAX to server)
+- Session storage for cart data
+
+---
+
+#### [NEW] [public/js/payment.js](file:///d:/Vero-20-4vvv/public/js/payment.js)
+
+- Payment method selection logic
+- COD deposit calculation (50% of total)
+- Payment proof file upload
+- Final order submission
+- Order data assembly from session storage
+
+---
+
+### 9. Server Integration
+
+---
+
+#### [MODIFY] [server.js](file:///d:/Vero-20-4vvv/server.js)
+
+Changes needed:
+
+1. **CSRF Exemption for Public API**: The customer API endpoints (`/api/public/*`) will NOT use session-based CSRF tokens (since there's no session). Instead, they'll use:
+   - Origin/Referer header checking
+   - Rate limiting
+   - Content-Type enforcement
+
+2. **Mount new routes**:
+   ```javascript
+   // Customer-facing pages (NO auth required)
+   app.use('/order', publicPageRoutes);
+   
+   // Customer-facing API (NO auth required, rate-limited)
+   app.use('/api/public', publicApiRateLimiter, publicApiRoutes);
+   ```
+
+3. **Public API rate limiter**: Separate, stricter rate limit for public API:
+   - 30 requests per minute per IP for general endpoints
+   - 5 requests per minute for order submission
+
+4. **CSP update**: Allow Leaflet/Google Maps CDN sources
+
+---
+
+#### [MODIFY] [.env](file:///d:/Vero-20-4vvv/.env)
+
+Add:
+```
+GOOGLE_MAPS_API_KEY=your-key-here  # (or skip if using Leaflet)
+```
+
+---
+
+### 10. Security Strategy
+
+| Threat | Mitigation |
+|--------|-----------|
+| **MongoDB Injection** | `express-mongo-sanitize` (already active globally), Mongoose schema validation, type casting |
+| **XSS / HTML Injection** | `express-validator` `.escape()` on all string inputs, EJS auto-escaping (`<%= %>`), CSP headers via Helmet |
+| **Script Injection** | CSP `script-src: 'self'`, no inline scripts, no `eval()`, no `innerHTML` with user data |
+| **NoSQL Injection** | Whitelist-based query construction (never pass raw user input to `$where`, `$gt`, etc.), schema-level type enforcement |
+| **CSRF** | Origin/Referer checking for public APIs, existing CSRF tokens for admin |
+| **Price Manipulation** | All prices recalculated server-side from DB before order creation |
+| **Promo Code Abuse** | Server-side validation only, atomic usage counter, rate limiting |
+| **File Upload Attacks** | MIME type validation, file size limits, extension whitelist, storage outside web root consideration |
+| **Route Traversal** | Strict prefix isolation (`/order/*`, `/api/public/*` vs `/admin/*`, `/dashboard/*`) |
+| **Brute Force** | Rate limiting on all public endpoints |
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Map Provider**: Do you prefer **Google Maps** (requires API key + billing) or **Leaflet + OpenStreetMap** (free, no key needed)? I'll default to Leaflet if no preference stated.
+
+> [!IMPORTANT]  
+> **Logo**: Do you have a Vero logo image file to use on the landing page? If not, I'll create a stylized text logo with CSS.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. Start the server with `npm run dev` and verify no startup errors
+2. Test all customer page routes return 200:
+   - `GET /order`
+   - `GET /order/info`
+   - `GET /order/products`
+   - `GET /order/payment`
+3. Test API endpoints via browser:
+   - `GET /api/public/products` returns product JSON
+   - `GET /api/public/governorates` returns governorate list
+   - `POST /api/public/promo/validate` with valid/invalid codes
+   - `POST /api/public/orders` with valid/invalid payloads
+4. Verify admin routes still require authentication (reject unauthenticated requests)
+5. Test injection prevention:
+   - Submit `{"$gt": ""}` in phone field → should be rejected
+   - Submit `<script>alert(1)</script>` in name field → should be escaped
+6. Test rate limiting on public API endpoints
+
+### Manual Verification  
+- Complete a full customer order flow in the browser
+- Verify order appears in admin dashboard's orders page
+- Confirm map location picker works
+- Confirm promo code apply/reject flow
+- Confirm payment proof upload works
+- Test on mobile viewport sizes
+
+### Browser Testing
+- Navigate through all 5 pages to verify the full flow
+- Verify step indicator updates correctly
+- Verify cart persists across page navigation
+- Verify form validation shows errors correctly

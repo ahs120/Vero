@@ -1,0 +1,35 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width: 100%; max-width: 800px; margin: 0 auto; position: relative; z-index: 1;">
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <a href="/inventory/<%= category %>"><%= categoryLabel %></a>
+        <span>/</span>
+        <span><%= subCategory %></span>
+      </nav>
+      <h1><%= subCategory %></h1>
+    </div>
+
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h2 class="section-title">الأصناف المتاحة</h2>
+      </div>
+
+      <div class="empty-state" style="text-align: center; padding: 60px; color: var(--gray-500);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 20px; opacity: 0.5;">
+          <path d="M21 8V21H3V8"></path>
+          <path d="M1 3H23V8H1V3Z"></path>
+          <path d="M10 12H14"></path>
+        </svg>
+        <p>سيتم عرض منتجات "<%= subCategory %>" هنا قريباً.</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<%- include('../layouts/footer') %>

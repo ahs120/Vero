@@ -1,0 +1,24 @@
+<%- include('layouts/header', { title: typeof title !=='undefined' ? title : 'Error' , description: 'An error occurred' }) %>
+
+  <!-- Animated background orbs -->
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <main class="login-container">
+    <div class="login-card" style="text-align: center;">
+      <div class="login-header">
+        <h1 class="brand-name" style="font-size: 4rem; letter-spacing: 2px;">
+          <%= statusCode %>
+        </h1>
+        <p class="brand-tagline" style="margin-top: 12px; font-size: 1rem;">
+          <%= message %>
+        </p>
+      </div>
+      <a href="/" class="btn-login" style="display: inline-flex; text-decoration: none; margin-top: 8px;">
+        <span class="btn-text">Back to Login</span>
+      </a>
+    </div>
+  </main>
+
+<%- include('layouts/footer') %>

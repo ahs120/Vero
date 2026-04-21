@@ -1,0 +1,62 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <div class="analytics-page" style="width: 100%; max-width: 1000px; margin: 0 auto; position: relative; z-index: 1;">
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <span>التحليلات</span>
+      </nav>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <h1>المبيعات والمصاريف</h1>
+        <a href="/analytics/add-expense" style="background:var(--primary);color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:0.95rem;">+ إضافة مصروف</a>
+      </div>
+    </div>
+
+    <div class="dashboard-layout" style="grid-template-columns: 1fr;">
+      
+      <!-- Financial Overview -->
+      <section class="dashboard-section">
+        <div class="section-header">
+          <h2 class="section-title">نظرة عامة على الأداء</h2>
+        </div>
+        
+        <div class="sales-grid">
+          <div class="sales-item">
+            <span class="sales-label">إجمالي المبيعات (كل الطلبات)</span>
+            <span class="sales-amount"><%= salesTotal.toLocaleString() %> ج.م</span>
+          </div>
+          <div class="sales-item">
+            <span class="sales-label">إجمالي المصاريف</span>
+            <span class="sales-amount" style="color: var(--error);"><%= expenses.toLocaleString() %> ج.م</span>
+          </div>
+          <div class="sales-item profit-total">
+            <span class="sales-label">الربح الصافي المتوقع</span>
+            <span class="sales-amount"><%= profit.toLocaleString() %> ج.م</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Revenue Breakdown -->
+      <section class="dashboard-section">
+        <div class="section-header">
+          <h2 class="section-title">تفاصيل الإيرادات حسب حالة الطلب</h2>
+        </div>
+
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <%- include('../partials/_statCard', { label: 'طلبات قيد المراجعة', value: (sales.pending_review || 0).toLocaleString() + ' ج.م' }) %>
+          <%- include('../partials/_statCard', { label: 'طلبات قيد التحضير', value: (sales.pending_preparation || 0).toLocaleString() + ' ج.م' }) %>
+          <%- include('../partials/_statCard', { label: 'طلبات قيد التوصيل', value: (sales.pending_delivery || 0).toLocaleString() + ' ج.م' }) %>
+          <%- include('../partials/_statCard', { label: 'طلبات مكتملة', value: (sales.completed || 0).toLocaleString() + ' ج.م', color: 'success' }) %>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<%- include('../layouts/footer') %>

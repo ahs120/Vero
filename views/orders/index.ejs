@@ -1,0 +1,298 @@
+<%- include('../layouts/header', { title: title, description: description }) %>
+
+<style>
+  /* ── Status Tabs ── */
+  .orders-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .orders-tab {
+    padding: 8px 18px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: 1px solid var(--surface-glass-border);
+    background: var(--surface-light);
+    color: var(--gray-300);
+    transition: all 0.2s ease;
+  }
+  .orders-tab:hover { background: var(--gray-700); color: white; }
+  .orders-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: transparent;
+  }
+
+  /* ── Order Row ── */
+  .order-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-light);
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--surface-glass-border);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    gap: 12px;
+  }
+  .order-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  /* ── Status Badge ── */
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .status-badge.pending_review      { background: rgba(250,200,50,0.15); color: #facc32; }
+  .status-badge.pending_preparation { background: rgba(100,150,255,0.15); color: #6496ff; }
+  .status-badge.pending_delivery    { background: rgba(100,200,255,0.15); color: #64c8ff; }
+  .status-badge.completed           { background: rgba(50,200,120,0.15); color: #32c878; }
+
+  /* ── Slide-from-left Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal {
+    position: fixed;
+    top: 0;
+    left: -420px;
+    width: 420px;
+    max-width: 100vw;
+    height: 100%;
+    background: var(--surface);
+    border-right: 1px solid var(--surface-glass-border);
+    z-index: 1000;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+    padding: 0;
+  }
+  .modal.active { left: 0; }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--surface-glass-border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+  .modal-header h2 { margin: 0; font-size: 1.1rem; }
+  .modal-close-btn {
+    background: none;
+    border: 1.5px solid var(--gray-600);
+    color: var(--gray-300);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .modal-close-btn:hover { background: var(--error); border-color: var(--error); color: white; }
+  .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--surface-glass-border);
+    gap: 12px;
+  }
+  .detail-label { color: var(--gray-400); font-size: 0.88rem; min-width: 120px; }
+  .detail-value { color: var(--gray-50); font-size: 0.92rem; text-align: left; word-break: break-word; }
+
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.88rem; }
+  .items-table th { color: var(--gray-400); text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--surface-glass-border); }
+  .items-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--gray-200); }
+
+  .transfer-img { max-width: 100%; border-radius: 10px; border: 1px solid var(--surface-glass-border); margin-top: 8px; }
+
+  /* ── Change Status Button ── */
+  .change-status-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .change-status-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .change-status-btn:hover:not(:disabled) { opacity: 0.85; }
+
+  /* ── Date Filter ── */
+  .date-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .date-filter-row input[type="date"] {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: var(--surface-light);
+    border: 1px solid var(--surface-glass-border);
+    color: white;
+    font-size: 0.9rem;
+  }
+  .date-filter-row button {
+    padding: 8px 18px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+</style>
+
+<main class="dashboard-container">
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+
+  <div class="category-page" style="width:100%;max-width:1000px;margin:0 auto;position:relative;z-index:1;">
+
+    <div class="category-header">
+      <nav class="breadcrumb">
+        <a href="/dashboard">لوحة التحكم</a>
+        <span>/</span>
+        <span>الطلبات</span>
+      </nav>
+      <h1>الطلبات</h1>
+    </div>
+
+    <!-- Date Filter -->
+    <form id="dateFilterForm" method="GET" action="/orders" class="date-filter-row">
+      <% if (activeStatus) { %>
+        <input type="hidden" name="status" value="<%= activeStatus %>">
+      <% } %>
+      <label for="dateInput" style="color:var(--gray-300);font-size:0.9rem;">تصفية بالتاريخ:</label>
+      <input
+        type="date"
+        id="dateInput"
+        name="date"
+        value="<%= displayDate %>"
+      >
+      <button type="submit">تطبيق</button>
+      <a
+        href="/orders<%= activeStatus ? '?status=' + activeStatus : '' %>"
+        style="padding:8px 14px;border-radius:8px;background:var(--surface-light);color:var(--gray-300);border:1px solid var(--surface-glass-border);text-decoration:none;font-size:0.9rem;"
+      >اليوم</a>
+    </form>
+
+    <!-- Status Tabs -->
+    <div class="orders-tabs">
+      <a href="/orders?date=<%= displayDate %>" class="orders-tab <%= !activeStatus ? 'active' : '' %>">
+        الكل (<%= total %>)
+      </a>
+      <% VALID_STATUSES.forEach(function(s) { %>
+        <a
+          href="/orders?status=<%= s %>&date=<%= displayDate %>"
+          class="orders-tab <%= activeStatus === s ? 'active' : '' %>"
+        >
+          <%= STATUS_LABELS[s] %>
+        </a>
+      <% }); %>
+    </div>
+
+    <!-- Orders List -->
+    <section class="dashboard-section">
+      <% if (orders && orders.length > 0) { %>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <% orders.forEach(function(order) { %>
+            <div
+              class="order-row"
+              data-id="<%= order._id %>"
+              role="button"
+              tabindex="0"
+            >
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
+                <span style="font-weight:bold;color:var(--gray-50);font-size:0.95rem;">
+                  <%= order.orderCode || order.orderNumber || String(order._id).slice(-6) %>
+                </span>
+                <% if (order.customerName) { %>
+                  <span style="color:var(--gray-400);font-size:0.83rem;"><%= order.customerName %></span>
+                <% } %>
+                <span style="color:var(--gray-500);font-size:0.78rem;">
+                  <%= new Date(order.createdAt).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'}) %>
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+                <span style="color:var(--gray-200);font-weight:600;font-size:0.95rem;">
+                  <%= order.totalAmount.toLocaleString() %> ج.م
+                </span>
+                <span class="status-badge <%= order.status %>">
+                  <%= STATUS_LABELS[order.status] || order.status %>
+                </span>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:24px;flex-wrap:wrap;">
+            <% for (let p = 1; p <= totalPages; p++) { %>
+              <a
+                href="/orders?<%= activeStatus ? 'status=' + activeStatus + '&' : '' %>date=<%= displayDate %>&page=<%= p %>"
+                style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:0.9rem;
+                  background:<%= p === currentPage ? 'var(--primary)' : 'var(--surface-light)' %>;
+                  color:<%= p === currentPage ? 'white' : 'var(--gray-300)' %>;
+                  border:1px solid <%= p === currentPage ? 'transparent' : 'var(--surface-glass-border)' %>;"
+              ><%= p %></a>
+            <% } %>
+          </div>
+        <% } %>
+
+      <% } else { %>
+        <div style="text-align:center;padding:48px;color:var(--gray-500);">
+          <p>لا توجد طلبات لهذا التاريخ / الحالة.</p>
+        </div>
+      <% } %>
+    </section>
+
+  </div><!-- /.category-page -->
+</main>
+
+
+
+<script nonce="<%= nonce %>">
+  // Embed CSRF token for AJAX requests
+  window.__CSRF = '<%= csrfToken %>';
+  window.STATUS_LABELS = <%- JSON.stringify(STATUS_LABELS) %>;
+  window.VALID_STATUSES = <%- JSON.stringify(VALID_STATUSES) %>;
+</script>
+<script src="/js/orders.js"></script>
+
+<%- include('../layouts/footer') %>
